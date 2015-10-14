@@ -113,7 +113,8 @@ namespace Sample.iOS
 
 				if (captureImage != null) {
 					InvokeOnMainThread (() => {
-						CGRect theRect = new CGRect(new CGPoint(0,0), new CGSize(200,400));
+						nfloat height = 300 * (captureImage.Size.Height / captureImage.Size.Width);
+						CGRect theRect = new CGRect(new CGPoint(10,0), new CGSize(300,height));
 						UIImageView theView = new UIImageView(theRect);
 						theView.ContentMode = UIViewContentMode.ScaleToFill;
 						this.View.AddSubview(theView);
@@ -127,16 +128,38 @@ namespace Sample.iOS
 						ctx.SetLineWidth(2);
 						ctx.MoveTo(result.ResultPoints[0].X, result.ResultPoints[0].Y);
 						ctx.AddLineToPoint(result.ResultPoints[1].X, result.ResultPoints[1].Y);
+						ctx.StrokePath();
+
+						ctx.SetStrokeColor(UIColor.Green.CGColor);
+						ctx.MoveTo(result.ResultPoints[1].X, result.ResultPoints[1].Y);
 						ctx.AddLineToPoint(result.ResultPoints[2].X, result.ResultPoints[2].Y);
+						ctx.StrokePath();
+
+						ctx.SetStrokeColor(UIColor.Blue.CGColor);
+						ctx.MoveTo(result.ResultPoints[2].X, result.ResultPoints[2].Y);
 						ctx.AddLineToPoint(result.ResultPoints[3].X, result.ResultPoints[3].Y);
+						ctx.StrokePath();
+
+						ctx.SetStrokeColor(UIColor.Yellow.CGColor);
+						ctx.MoveTo(result.ResultPoints[3].X, result.ResultPoints[3].Y);
 						ctx.AddLineToPoint(result.ResultPoints[0].X, result.ResultPoints[0].Y);
 						ctx.StrokePath();
+
 
 						UIImage retImage = UIGraphics.GetImageFromCurrentImageContext();
 
 						UIGraphics.EndImageContext();
 
 						theView.Image = retImage;
+
+						UIButton theBtn = new UIButton(new CGRect(100,380,100,32));
+						theBtn.SetTitle("Dismiss", UIControlState.Normal);
+						theBtn.BackgroundColor = UIColor.Red;
+						this.View.AddSubview(theBtn);
+						theBtn.TouchUpInside += (object sender, EventArgs e) => {
+							theView.RemoveFromSuperview();
+							theBtn.RemoveFromSuperview();
+						};
 
 					});
 
