@@ -6,6 +6,7 @@ using Android.Widget;
 using Android.OS;
 using ZXing;
 using ZXing.Mobile;
+using Android.Graphics;
 
 namespace Sample.Android
 {
@@ -17,6 +18,9 @@ namespace Sample.Android
         Button buttonContinuousScan;
 		Button buttonFragmentScanner;
         Button buttonGenerate;
+		Button hideImage;
+		ImageView previewImage;
+
 
 		MobileBarcodeScanner scanner;
 	
@@ -32,6 +36,16 @@ namespace Sample.Android
 
 			//Create a new instance of our Scanner
 			scanner = new MobileBarcodeScanner();
+			hideImage = this.FindViewById<Button>(Resource.Id.hideImageBtn);
+			previewImage = this.FindViewById<ImageView>(Resource.Id.previewImage);
+			hideImage.Visibility = ViewStates.Gone;
+			previewImage.Visibility = ViewStates.Gone;
+
+			hideImage.Click += (object sender, System.EventArgs e) => {
+				hideImage.Visibility = ViewStates.Gone;
+				previewImage.Visibility = ViewStates.Gone;
+
+			};
 
 			buttonScanDefaultView = this.FindViewById<Button>(Resource.Id.buttonScanDefaultView);
 			buttonScanDefaultView.Click += async delegate {
@@ -44,7 +58,9 @@ namespace Sample.Android
 				scanner.BottomText = "Wait for the barcode to automatically scan!";
 
 				//Start scanning
-				var result = await scanner.Scan();
+				var options = new ZXing.Mobile.MobileBarcodeScanningOptions();
+				options.PossibleFormats = new List<ZXing.BarcodeFormat>() { ZXing.BarcodeFormat.AZTEC };
+				var result = await scanner.Scan(options);
 
 				HandleScanResult(result);
 			};
@@ -110,7 +126,26 @@ namespace Sample.Android
 			else
 				msg = "Scanning Canceled!";
 
-			this.RunOnUiThread(() => Toast.MakeText(this, msg, ToastLength.Short).Show());
+			this.RunOnUiThread(() => {
+				Toast.MakeText(this, msg, ToastLength.Short).Show();
+				hideImage.Visibility = ViewStates.Visible;
+				previewImage.Visibility = ViewStates.Visible;
+				Bitmap resultBitmap = result.CaptureImage as Bitmap;
+				Bitmap canvasMap = resultBitmap.Copy(resultBitmap.GetConfig(), true);
+				Canvas newCanvas = new Canvas(canvasMap);
+				Paint thePaint = new Paint(PaintFlags.AntiAlias);
+
+				thePaint.Color = Color.Red;
+				thePaint.StrokeWidth = 2;
+				newCanvas.DrawLine(result.ResultPoints[0].X, result.ResultPoints[0].Y, result.ResultPoints[1].X, result.ResultPoints[1].Y, thePaint);
+				thePaint.Color = Color.Green;
+				newCanvas.DrawLine(result.ResultPoints[1].X, result.ResultPoints[1].Y, result.ResultPoints[2].X, result.ResultPoints[2].Y, thePaint);
+				thePaint.Color = Color.Blue;
+				newCanvas.DrawLine(result.ResultPoints[2].X, result.ResultPoints[2].Y, result.ResultPoints[3].X, result.ResultPoints[3].Y, thePaint);
+				thePaint.Color = Color.Yellow;
+				newCanvas.DrawLine(result.ResultPoints[3].X, result.ResultPoints[3].Y, result.ResultPoints[0].X, result.ResultPoints[0].Y, thePaint);
+				previewImage.SetImageBitmap(canvasMap);
+			});
 		}
 	}
 }

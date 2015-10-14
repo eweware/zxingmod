@@ -169,6 +169,35 @@ namespace ZXing.Mobile
 			}
 			return rotatedData;
 		}
+
+		private byte[] rotateYUV420Degree90(byte[] data, int imageWidth, int imageHeight) 
+		{
+			byte [] yuv = new byte[imageWidth*imageHeight*3/2];
+			// Rotate the Y luma
+			int i = 0;
+			for(int x = 0;x < imageWidth;x++)
+			{
+				for(int y = imageHeight-1;y >= 0;y--)                               
+				{
+					yuv[i] = data[y*imageWidth+x];
+					i++;
+				}
+			}
+			// Rotate the U and V color components 
+			i = imageWidth*imageHeight*3/2-1;
+			for(int x = imageWidth-1;x > 0;x=x-2)
+			{
+				for(int y = 0;y < imageHeight/2;y++)                                
+				{
+					yuv[i] = data[(imageWidth*imageHeight)+(y*imageWidth)+x];
+					i--;
+					yuv[i] = data[(imageWidth*imageHeight)+(y*imageWidth)+(x-1)];
+					i--;
+				}
+			}
+			return yuv;
+		}
+
 		
         DateTime lastPreviewAnalysis = DateTime.UtcNow;
 		BarcodeReader barcodeReader = null;
@@ -241,19 +270,26 @@ namespace ZXing.Mobile
 						newHeight = width;
 					}
 					
-					var start = PerformanceCounter.Start();
 					
 					if (rotate)
-						bytes = rotateCounterClockwise(bytes, width, height);
+							bytes = rotateYUV420Degree90(bytes, width, height);//rotateCounterClockwise(bytes, width, height);
 										
 					var result = barcodeReader.Decode (bytes, newWidth, newHeight, RGBLuminanceSource.BitmapFormat.Unknown);
-
-						PerformanceCounter.Stop(start, "Decode Time: {0} ms (width: " + width + ", height: " + height + ", degrees: " + cDegrees + ", rotate: " + rotate + ")");
 				
 					if (result == null || string.IsNullOrEmpty (result.Text))
 						return;
 				
                     Android.Util.Log.Debug (MobileBarcodeScanner.TAG, "Barcode Found: " + result.Text);
+
+						var img = new YuvImage(bytes, cameraParameters.PreviewFormat, newWidth, newHeight, null);
+
+					System.IO.MemoryStream outStream = new System.IO.MemoryStream();
+					bool didIt = img.CompressToJpeg(new Rect(0,0,newWidth, newHeight), 75, outStream);
+					outStream.Seek(0, System.IO.SeekOrigin.Begin);
+					Bitmap newBM = BitmapFactory.DecodeStream(outStream);
+
+					result.CaptureImage = newBM;
+					
 				
                     wasScanned = true;
 					callback (result);
@@ -277,7 +313,7 @@ namespace ZXing.Mobile
 		public void OnAutoFocus (bool success, Android.Hardware.Camera camera)
 		{
             Android.Util.Log.Debug(MobileBarcodeScanner.TAG, "AutoFocused");
-			
+			/*
 			Task.Factory.StartNew(() => 
 			                                             {
 				int slept = 0;
@@ -291,6 +327,7 @@ namespace ZXing.Mobile
 				if (!tokenSource.IsCancellationRequested)
 					AutoFocus();
 			});
+			*/
 		}
 		
 		public override bool OnTouchEvent (MotionEvent e)
